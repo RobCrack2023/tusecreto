@@ -34,7 +34,7 @@
       <div class="card-meta">
         <div class="card-meta-top">
           {% if story.age_range %}<span class="age-badge">{{ story.age_range }} años</span>{% endif %}
-          {% if story.country_code %}<span class="country-flag" title="{{ story.country_name or '' }}">{{ country_flag(story.country_code) }}</span>{% endif %}
+          {% if story.country_code %}{{ country_flag(story.country_code, story.country_name or '') | safe }}{% endif %}
         </div>
         <span class="card-time">{{ story.time_ago() }}</span>
       </div>

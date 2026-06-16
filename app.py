@@ -72,10 +72,13 @@ def voter_token(ip: str) -> str:
     return hashlib.sha256(raw.encode()).hexdigest()
 
 
-def country_flag(code: str) -> str:
+def country_flag(code: str, name: str = '') -> str:
     if not code or len(code) != 2:
         return ''
-    return ''.join(chr(0x1F1E0 + ord(c) - ord('A')) for c in code.upper())
+    c = code.lower()
+    return (f'<img src="https://flagcdn.com/20x15/{c}.png" '
+            f'srcset="https://flagcdn.com/40x30/{c}.png 2x" '
+            f'alt="{code}" title="{name}" class="country-flag-img" loading="lazy">')
 
 
 def get_country(ip: str) -> tuple[str, str]:
