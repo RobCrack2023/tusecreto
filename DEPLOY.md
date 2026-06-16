@@ -42,7 +42,8 @@ Generar claves seguras:
 ```bash
 python3 -c "import secrets; print(secrets.token_hex(48))"
 ```
-
+986d4e16ce6835b25b7219d369780268fee58802c36115976d6fdb1313fdc4ad961059d19aae31166f696d7c391457d9
+dcefa6b06ad2b87504cfbf639cd28b6457f7c22af0c4838d6f32fdde77efb5cb9cfcbff3afa4253dba840afc37f7ceee
 Permisos estrictos sobre el archivo:
 ```bash
 chmod 600 /var/www/tusecreto/.env
@@ -197,7 +198,7 @@ from werkzeug.middleware.proxy_fix import ProxyFix
 app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_host=1)
 ```
 
-> Ya está incluido el header en el virtual host. Solo agregar `ProxyFix` en `app.py` antes del primer deploy o en un commit posterior.
+> Ambas configuraciones ya están aplicadas: el header en el virtual host y `ProxyFix` en `app.py`.
 
 ---
 

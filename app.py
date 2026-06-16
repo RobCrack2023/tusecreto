@@ -7,6 +7,7 @@ from functools import wraps
 
 from flask import (Flask, render_template, request, redirect, url_for,
                    session, jsonify, flash, abort, send_from_directory)
+from werkzeug.middleware.proxy_fix import ProxyFix
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
 from werkzeug.security import generate_password_hash, check_password_hash
@@ -28,6 +29,7 @@ def set_sqlite_wal(dbapi_con, _):
         dbapi_con.execute("PRAGMA journal_mode=WAL")
 
 app = Flask(__name__)
+app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_host=1)
 app.secret_key = config.SECRET_KEY
 app.config['SQLALCHEMY_DATABASE_URI'] = config.DATABASE_URI
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
