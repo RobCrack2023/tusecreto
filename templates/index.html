@@ -1,0 +1,155 @@
+{% extends "base.html" %}
+{% block title %}Portal Secreto — Historias Anónimas{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <h1 class="page-title">Secretos y confesiones anónimas</h1>
+  <p class="page-subtitle">Historias reales, contadas sin miedo</p>
+</div>
+
+<div class="sort-tabs">
+  <a href="?sort=new"      class="sort-tab {% if sort == 'new' %}active{% endif %}">
+    <i class="fa-regular fa-clock"></i> Recientes
+  </a>
+  <a href="?sort=top"      class="sort-tab {% if sort == 'top' %}active{% endif %}">
+    <i class="fa-solid fa-fire"></i> Más votadas
+  </a>
+  <a href="?sort=trending" class="sort-tab {% if sort == 'trending' %}active{% endif %}">
+    <i class="fa-solid fa-arrow-trend-up"></i> Trending
+  </a>
+</div>
+
+{% if stories %}
+<div class="stories-grid">
+  {% for story in stories %}
+  {% set story_reactions = reactions_map.get(story.id, {}) %}
+  {% set my_sticker_id   = my_reacts.get(story.id) %}
+
+  <article class="story-card" style="--delay: {{ loop.index0 * 60 }}ms">
+    <!-- Cabecera -->
+    <div class="card-header">
+      <div class="anon-avatar emoji-avatar" style="--hue: {{ (story.id * 47) % 360 }}">
+        {{ story.avatar or '🐱' }}
+      </div>
+      <div class="card-meta">
+        <div class="card-meta-top">
+          {% if story.age_range %}<span class="age-badge">{{ story.age_range }} años</span>{% endif %}
+          {% if story.country_code %}<span class="country-flag" title="{{ story.country_name or '' }}">{{ country_flag(story.country_code) }}</span>{% endif %}
+        </div>
+        <span class="card-time">{{ story.time_ago() }}</span>
+      </div>
+      {% if story.is_edited %}
+      <span class="badge badge-edited" title="{{ story.edit_note or 'Editado por moderación' }}">
+        <i class="fa-solid fa-pen-to-square"></i> editado
+      </span>
+      {% endif %}
+    </div>
+
+    <!-- Imagen -->
+    {% if story.image_path %}
+    <div class="card-image">
+      <img src="{{ url_for('uploaded_file', filename=story.image_path) }}"
+           alt="Imagen de la historia" loading="lazy" onclick="openLightbox(this.src)">
+    </div>
+    {% endif %}
+
+    <!-- Texto -->
+    <div class="card-body">
+      <p class="story-text">{{ story.content }}</p>
+    </div>
+
+    <!-- Reacciones -->
+    <div class="card-footer">
+      <div class="reaction-bar" data-story-id="{{ story.id }}"
+           data-my-sticker="{{ my_sticker_id or '' }}">
+
+        <!-- Chips de reacciones activas -->
+        <div class="reaction-chips" id="chips-{{ story.id }}">
+          {% for sticker in active_stickers %}
+            {% set cnt = story_reactions.get(sticker.id, 0) %}
+            {% if cnt > 0 %}
+            <span class="reaction-chip {% if my_sticker_id == sticker.id %}mine{% endif %}"
+                  data-sticker-id="{{ sticker.id }}"
+                  data-story-id="{{ story.id }}">
+              {% if sticker.sticker_type == 'emoji' %}
+              <span class="s-emoji">{{ sticker.value }}</span>
+              {% else %}
+              <img src="{{ url_for('sticker_file', filename=sticker.value) }}"
+                   alt="{{ sticker.name }}" class="s-img">
+              {% endif %}
+              <span class="r-count">{{ cnt }}</span>
+            </span>
+            {% endif %}
+          {% endfor %}
+        </div>
+
+        <!-- Botón abrir picker -->
+        <button class="react-trigger" data-story-id="{{ story.id }}"
+                title="Reaccionar" aria-label="Abrir stickers">
+          <i class="fa-regular fa-face-smile-plus"></i>
+        </button>
+
+        <!-- Botón respuestas -->
+        <a href="{{ url_for('story_detail', story_id=story.id) }}#replies"
+           class="reply-count-btn" title="Ver respuestas">
+          <i class="fa-regular fa-comment"></i>
+          {% set rc = reply_counts.get(story.id, 0) %}
+          {% if rc > 0 %}<span>{{ rc }}</span>{% endif %}
+        </a>
+      </div>
+    </div>
+  </article>
+  {% endfor %}
+</div>
+
+{% if total_pages > 1 %}
+<nav class="pagination">
+  {% if page > 1 %}
+  <a href="?sort={{ sort }}&page={{ page - 1 }}" class="page-btn"><i class="fa-solid fa-chevron-left"></i></a>
+  {% endif %}
+  {% for p in range(1, total_pages + 1) %}
+    {% if p == page %}<span class="page-btn active">{{ p }}</span>
+    {% elif p == 1 or p == total_pages or (p >= page - 2 and p <= page + 2) %}
+    <a href="?sort={{ sort }}&page={{ p }}" class="page-btn">{{ p }}</a>
+    {% elif p == page - 3 or p == page + 3 %}<span class="page-dots">…</span>
+    {% endif %}
+  {% endfor %}
+  {% if page < total_pages %}
+  <a href="?sort={{ sort }}&page={{ page + 1 }}" class="page-btn"><i class="fa-solid fa-chevron-right"></i></a>
+  {% endif %}
+</nav>
+{% endif %}
+
+{% else %}
+<div class="empty-state">
+  <div class="empty-icon"><i class="fa-solid fa-lock"></i></div>
+  <h2>Aún no hay secretos aquí</h2>
+  <p>Sé el primero en compartir el tuyo.</p>
+  <a href="{{ url_for('submit') }}" class="btn-primary">
+    <i class="fa-solid fa-feather-pointed"></i> Contar mi secreto
+  </a>
+</div>
+{% endif %}
+
+<!-- Sticker Picker (global, posicionado por JS) -->
+<div id="stickerPicker" class="sticker-picker" role="dialog" aria-label="Elige un sticker">
+  <div class="picker-inner">
+    {% for sticker in active_stickers %}
+    <button class="sp-btn" data-sticker-id="{{ sticker.id }}" title="{{ sticker.name }}">
+      {% if sticker.sticker_type == 'emoji' %}
+      <span class="s-emoji">{{ sticker.value }}</span>
+      {% else %}
+      <img src="{{ url_for('sticker_file', filename=sticker.value) }}"
+           alt="{{ sticker.name }}" class="s-img">
+      {% endif %}
+    </button>
+    {% endfor %}
+  </div>
+</div>
+
+<!-- Lightbox -->
+<div class="lightbox" id="lightbox" onclick="closeLightbox()">
+  <button class="lightbox-close" onclick="closeLightbox()"><i class="fa-solid fa-xmark"></i></button>
+  <img id="lightbox-img" src="" alt="Imagen ampliada">
+</div>
+{% endblock %}

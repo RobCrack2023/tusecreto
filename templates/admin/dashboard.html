@@ -1,0 +1,136 @@
+{% extends "base.html" %}
+{% block title %}Dashboard Admin — Portal Secreto{% endblock %}
+
+{% block content %}
+<div class="admin-page">
+  <!-- Header admin -->
+  <div class="admin-topbar">
+    <div>
+      <h1 class="admin-title">
+        <i class="fa-solid fa-shield-halved"></i> Panel de Moderación
+      </h1>
+      <p class="admin-sub">Bienvenido, <strong>{{ session.admin_username }}</strong></p>
+    </div>
+    <div style="display:flex;gap:10px">
+      <a href="{{ url_for('admin_stickers') }}" class="btn-logout">
+        <i class="fa-solid fa-icons"></i> Stickers
+      </a>
+      <a href="{{ url_for('admin_logout') }}" class="btn-logout">
+        <i class="fa-solid fa-right-from-bracket"></i> Salir
+      </a>
+    </div>
+  </div>
+
+  <!-- Filtros y búsqueda -->
+  <div class="admin-controls">
+    <div class="filter-tabs">
+      <a href="?filter=all"     class="filter-tab {% if filter_by == 'all' %}active{% endif %}">Todas</a>
+      <a href="?filter=visible" class="filter-tab {% if filter_by == 'visible' %}active{% endif %}">Visibles</a>
+      <a href="?filter=hidden"  class="filter-tab {% if filter_by == 'hidden' %}active{% endif %}">Ocultas</a>
+      <a href="?filter=edited"  class="filter-tab {% if filter_by == 'edited' %}active{% endif %}">Editadas</a>
+    </div>
+    <form class="search-form" method="GET" action="{{ url_for('admin_dashboard') }}">
+      <input type="hidden" name="filter" value="{{ filter_by }}">
+      <div class="search-wrap">
+        <i class="fa-solid fa-magnifying-glass search-icon"></i>
+        <input type="search" name="q" value="{{ search }}"
+               placeholder="Buscar en historias..." class="search-input">
+        <button type="submit" class="search-btn">Buscar</button>
+      </div>
+    </form>
+  </div>
+
+  <!-- Tabla de historias -->
+  {% if stories %}
+  <div class="admin-table-wrap">
+    <table class="admin-table">
+      <thead>
+        <tr>
+          <th>#</th>
+          <th>Historia</th>
+          <th>Votos</th>
+          <th>Fecha</th>
+          <th>Estado</th>
+          <th>Acciones</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for story in stories %}
+        <tr class="{% if story.is_hidden %}row-hidden{% endif %}">
+          <td class="col-id">{{ story.id }}</td>
+          <td class="col-content">
+            <div class="content-preview">
+              {{ story.content[:120] }}{% if story.content|length > 120 %}…{% endif %}
+            </div>
+            {% if story.image_path %}
+            <span class="badge badge-img"><i class="fa-regular fa-image"></i> imagen</span>
+            {% endif %}
+            {% if story.is_edited %}
+            <span class="badge badge-edited"><i class="fa-solid fa-pen-to-square"></i> editada</span>
+            {% endif %}
+          </td>
+          <td class="col-votes">
+            <span class="vote-pill">
+              <i class="fa-solid fa-heart"></i> {{ story.vote_count }}
+            </span>
+          </td>
+          <td class="col-date">{{ story.time_ago() }}</td>
+          <td class="col-status">
+            {% if story.is_hidden %}
+            <span class="status-badge status-hidden"><i class="fa-solid fa-eye-slash"></i> Oculta</span>
+            {% else %}
+            <span class="status-badge status-visible"><i class="fa-solid fa-eye"></i> Visible</span>
+            {% endif %}
+          </td>
+          <td class="col-actions">
+            <div class="action-btns">
+              <a href="{{ url_for('admin_edit', story_id=story.id) }}"
+                 class="action-btn btn-edit" title="Editar">
+                <i class="fa-solid fa-pen"></i>
+              </a>
+              <form method="POST" action="{{ url_for('admin_hide', story_id=story.id) }}" class="inline-form">
+                <button type="submit" class="action-btn {% if story.is_hidden %}btn-show{% else %}btn-hide{% endif %}"
+                        title="{% if story.is_hidden %}Mostrar{% else %}Ocultar{% endif %}">
+                  <i class="fa-solid {% if story.is_hidden %}fa-eye{% else %}fa-eye-slash{% endif %}"></i>
+                </button>
+              </form>
+              <form method="POST" action="{{ url_for('admin_delete', story_id=story.id) }}" class="inline-form"
+                    onsubmit="return confirm('¿Eliminar esta historia permanentemente?')">
+                <button type="submit" class="action-btn btn-delete" title="Eliminar">
+                  <i class="fa-solid fa-trash"></i>
+                </button>
+              </form>
+            </div>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  <!-- Paginación admin -->
+  {% if pagination.pages > 1 %}
+  <nav class="pagination">
+    {% if pagination.has_prev %}
+    <a href="?filter={{ filter_by }}&q={{ search }}&page={{ pagination.prev_num }}" class="page-btn">
+      <i class="fa-solid fa-chevron-left"></i>
+    </a>
+    {% endif %}
+    <span class="page-btn active">{{ pagination.page }} / {{ pagination.pages }}</span>
+    {% if pagination.has_next %}
+    <a href="?filter={{ filter_by }}&q={{ search }}&page={{ pagination.next_num }}" class="page-btn">
+      <i class="fa-solid fa-chevron-right"></i>
+    </a>
+    {% endif %}
+  </nav>
+  {% endif %}
+
+  {% else %}
+  <div class="empty-state">
+    <i class="fa-solid fa-inbox" style="font-size:3rem;color:var(--accent)"></i>
+    <h2>Sin resultados</h2>
+    <p>No hay historias que coincidan con los filtros.</p>
+  </div>
+  {% endif %}
+</div>
+{% endblock %}

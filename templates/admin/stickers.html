@@ -1,0 +1,151 @@
+{% extends "base.html" %}
+{% block title %}Gestión de Stickers — Admin{% endblock %}
+
+{% block content %}
+<div class="admin-page">
+  <div class="admin-topbar">
+    <div>
+      <h1 class="admin-title"><i class="fa-solid fa-icons"></i> Stickers</h1>
+      <p class="admin-sub">Gestiona los stickers de reacción disponibles para los usuarios</p>
+    </div>
+    <div style="display:flex;gap:10px">
+      <a href="{{ url_for('admin_dashboard') }}" class="btn-logout">
+        <i class="fa-solid fa-arrow-left"></i> Volver
+      </a>
+      <a href="{{ url_for('admin_logout') }}" class="btn-logout">
+        <i class="fa-solid fa-right-from-bracket"></i> Salir
+      </a>
+    </div>
+  </div>
+
+  <!-- Formularios de añadir -->
+  <div class="sticker-add-grid">
+
+    <!-- Subir imagen -->
+    <div class="sticker-add-card">
+      <h2 class="panel-title"><i class="fa-solid fa-cloud-arrow-up"></i> Subir sticker imagen</h2>
+      <p class="sticker-hint">PNG, GIF o WEBP con fondo transparente · máx 2 MB</p>
+      <form method="POST" action="{{ url_for('admin_sticker_upload') }}" enctype="multipart/form-data" class="sticker-form">
+        <div class="field-group">
+          <label class="field-label">Nombre del sticker</label>
+          <input type="text" name="name" class="field-input" placeholder="Ej: Pepe LOL" required maxlength="50">
+        </div>
+        <div class="field-group">
+          <label class="field-label">Archivo de imagen</label>
+          <div class="upload-zone sticker-upload-zone" id="stickerUploadZone">
+            <input type="file" name="sticker" id="stickerFile"
+                   accept=".png,.gif,.webp,.jpg,.jpeg" class="upload-input" required>
+            <div class="upload-placeholder" id="stickerPlaceholder">
+              <i class="fa-solid fa-image"></i>
+              <span>Haz clic o arrastra la imagen aquí</span>
+            </div>
+            <div id="stickerPreviewWrap" style="display:none;padding:12px;text-align:center">
+              <img id="stickerPreviewImg" style="max-height:80px;border-radius:8px" alt="preview">
+              <p id="stickerFileName" style="font-size:0.78rem;color:var(--text-dim);margin-top:6px"></p>
+            </div>
+          </div>
+        </div>
+        <button type="submit" class="btn-submit">
+          <i class="fa-solid fa-plus"></i> Añadir sticker
+        </button>
+      </form>
+    </div>
+
+    <!-- Añadir emoji -->
+    <div class="sticker-add-card">
+      <h2 class="panel-title"><i class="fa-regular fa-face-smile"></i> Añadir sticker emoji</h2>
+      <p class="sticker-hint">Usa cualquier emoji como sticker de reacción</p>
+      <form method="POST" action="{{ url_for('admin_sticker_add_emoji') }}" class="sticker-form">
+        <div class="field-group">
+          <label class="field-label">Nombre del sticker</label>
+          <input type="text" name="name" class="field-input" placeholder="Ej: Fuego" required maxlength="50">
+        </div>
+        <div class="field-group">
+          <label class="field-label">Emoji</label>
+          <input type="text" name="emoji" class="field-input emoji-input"
+                 placeholder="🔥" required maxlength="8"
+                 style="font-size:2rem;text-align:center;padding:10px">
+        </div>
+        <button type="submit" class="btn-submit">
+          <i class="fa-solid fa-plus"></i> Añadir emoji
+        </button>
+      </form>
+    </div>
+  </div>
+
+  <!-- Lista de stickers -->
+  <h2 class="panel-title" style="margin:28px 0 14px">
+    <i class="fa-solid fa-list"></i> Stickers activos ({{ stickers|length }})
+  </h2>
+
+  {% if stickers %}
+  <div class="sticker-grid-admin">
+    {% for sticker in stickers %}
+    <div class="sticker-admin-card {% if not sticker.is_active %}sticker-inactive{% endif %}">
+      <div class="sticker-preview-box">
+        {% if sticker.sticker_type == 'emoji' %}
+        <span style="font-size:2.4rem;line-height:1">{{ sticker.value }}</span>
+        {% else %}
+        <img src="{{ url_for('sticker_file', filename=sticker.value) }}"
+             alt="{{ sticker.name }}" style="max-width:56px;max-height:56px;object-fit:contain">
+        {% endif %}
+      </div>
+      <div class="sticker-info">
+        <span class="sticker-name">{{ sticker.name }}</span>
+        <span class="sticker-type-badge">{{ sticker.sticker_type }}</span>
+      </div>
+      <div class="sticker-admin-actions">
+        <form method="POST" action="{{ url_for('admin_sticker_toggle', sticker_id=sticker.id) }}" class="inline-form">
+          <button type="submit" class="action-btn {% if sticker.is_active %}btn-hide{% else %}btn-show{% endif %}"
+                  title="{% if sticker.is_active %}Desactivar{% else %}Activar{% endif %}">
+            <i class="fa-solid {% if sticker.is_active %}fa-eye-slash{% else %}fa-eye{% endif %}"></i>
+          </button>
+        </form>
+        <form method="POST" action="{{ url_for('admin_sticker_delete', sticker_id=sticker.id) }}"
+              class="inline-form" onsubmit="return confirm('¿Eliminar este sticker?')">
+          <button type="submit" class="action-btn btn-delete" title="Eliminar">
+            <i class="fa-solid fa-trash"></i>
+          </button>
+        </form>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+  {% else %}
+  <div class="empty-state" style="padding:40px 0">
+    <p style="color:var(--text-dim)">No hay stickers todavía. ¡Añade el primero!</p>
+  </div>
+  {% endif %}
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+  const zone        = document.getElementById('stickerUploadZone');
+  const fileInput   = document.getElementById('stickerFile');
+  const placeholder = document.getElementById('stickerPlaceholder');
+  const prevWrap    = document.getElementById('stickerPreviewWrap');
+  const prevImg     = document.getElementById('stickerPreviewImg');
+  const prevName    = document.getElementById('stickerFileName');
+
+  zone.addEventListener('click', () => fileInput.click());
+  zone.addEventListener('dragover', e => { e.preventDefault(); zone.classList.add('drag-over'); });
+  zone.addEventListener('dragleave', () => zone.classList.remove('drag-over'));
+  zone.addEventListener('drop', e => {
+    e.preventDefault(); zone.classList.remove('drag-over');
+    if (e.dataTransfer.files[0]) showPreview(e.dataTransfer.files[0]);
+  });
+  fileInput.addEventListener('change', () => { if (fileInput.files[0]) showPreview(fileInput.files[0]); });
+
+  function showPreview(file) {
+    const reader = new FileReader();
+    reader.onload = e => {
+      prevImg.src = e.target.result;
+      prevName.textContent = file.name;
+      placeholder.style.display = 'none';
+      prevWrap.style.display = 'block';
+    };
+    reader.readAsDataURL(file);
+  }
+</script>
+{% endblock %}

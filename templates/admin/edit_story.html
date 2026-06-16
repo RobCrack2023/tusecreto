@@ -1,0 +1,84 @@
+{% extends "base.html" %}
+{% block title %}Editar Historia #{{ story.id }} — Admin{% endblock %}
+
+{% block content %}
+<div class="admin-page">
+  <div class="admin-topbar">
+    <div>
+      <h1 class="admin-title">
+        <i class="fa-solid fa-pen-to-square"></i> Editar Historia #{{ story.id }}
+      </h1>
+      <p class="admin-sub">Los cambios quedarán marcados como "editado" en el portal</p>
+    </div>
+    <a href="{{ url_for('admin_dashboard') }}" class="btn-logout">
+      <i class="fa-solid fa-arrow-left"></i> Volver
+    </a>
+  </div>
+
+  <div class="edit-layout">
+    <!-- Original -->
+    <div class="edit-panel">
+      <h2 class="panel-title"><i class="fa-solid fa-scroll"></i> Texto original</h2>
+      <div class="original-text">{{ story.content }}</div>
+      {% if story.image_path %}
+      <div class="edit-image-preview">
+        <img src="{{ url_for('uploaded_file', filename=story.image_path) }}" alt="Imagen adjunta">
+        <span class="img-label"><i class="fa-regular fa-image"></i> Imagen adjunta</span>
+      </div>
+      {% endif %}
+      <div class="story-meta-info">
+        <span><i class="fa-regular fa-clock"></i> {{ story.time_ago() }}</span>
+        <span><i class="fa-solid fa-heart"></i> {{ story.vote_count }} votos</span>
+        {% if story.is_hidden %}<span class="badge badge-hidden"><i class="fa-solid fa-eye-slash"></i> Oculta</span>{% endif %}
+      </div>
+    </div>
+
+    <!-- Editor -->
+    <div class="edit-panel">
+      <h2 class="panel-title"><i class="fa-solid fa-pen"></i> Editar contenido</h2>
+      <form method="POST" action="{{ url_for('admin_edit', story_id=story.id) }}" class="edit-form">
+        <div class="field-group">
+          <label for="content" class="field-label">Nuevo texto</label>
+          <div class="textarea-wrap">
+            <textarea id="content" name="content" class="field-textarea"
+                      rows="8" maxlength="2000" required>{{ story.content }}</textarea>
+            <div class="char-counter">
+              <span id="charCount">{{ story.content|length }}</span>/2000
+            </div>
+          </div>
+        </div>
+
+        <div class="field-group">
+          <label for="note" class="field-label">
+            <i class="fa-solid fa-note-sticky"></i> Nota interna (opcional)
+          </label>
+          <input type="text" id="note" name="note" class="field-input"
+                 placeholder="Ej: lenguaje ofensivo moderado"
+                 value="{{ story.edit_note or '' }}" maxlength="200">
+          <small class="field-hint">Solo visible para administradores</small>
+        </div>
+
+        <div class="edit-actions">
+          <button type="submit" class="btn-submit">
+            <i class="fa-solid fa-floppy-disk"></i> Guardar cambios
+          </button>
+          <a href="{{ url_for('admin_dashboard') }}" class="btn-cancel">Cancelar</a>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+  const textarea = document.getElementById('content');
+  const counter  = document.getElementById('charCount');
+  textarea.addEventListener('input', () => {
+    const len = textarea.value.length;
+    counter.textContent = len;
+    counter.parentElement.classList.toggle('near-limit', len > 1800);
+    counter.parentElement.classList.toggle('at-limit', len >= 2000);
+  });
+</script>
+{% endblock %}

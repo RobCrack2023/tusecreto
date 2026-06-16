@@ -1,0 +1,40 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+.Python
+*.egg-info/
+dist/
+build/
+*.egg
+
+# Entorno virtual
+venv/
+.venv/
+env/
+
+# Variables de entorno (contienen secretos)
+.env
+
+# Base de datos local
+*.db
+*.sqlite
+*.sqlite3
+
+# Uploads e imágenes subidas por usuarios
+static/uploads/
+static/stickers/
+
+# Logs
+*.log
+
+# Claude
+.claude/
+
+# Windows
+Thumbs.db
+desktop.ini
+
+# macOS
+.DS_Store

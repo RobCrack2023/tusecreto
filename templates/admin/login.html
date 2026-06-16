@@ -1,0 +1,61 @@
+{% extends "base.html" %}
+{% block title %}Admin — Portal Secreto{% endblock %}
+
+{% block content %}
+<div class="admin-login-page">
+  <div class="admin-login-card">
+    <div class="admin-login-icon">
+      <i class="fa-solid fa-lock"></i>
+    </div>
+    <h1>Acceso Administrador</h1>
+    <p class="admin-login-sub">Área restringida</p>
+
+    <form method="POST" action="{{ url_for('admin_login') }}" class="admin-login-form">
+      <div class="field-group">
+        <label for="username" class="field-label">Usuario</label>
+        <div class="input-wrap">
+          <i class="fa-solid fa-user input-icon"></i>
+          <input type="text" id="username" name="username"
+                 class="field-input" placeholder="Nombre de usuario"
+                 autocomplete="username" required autofocus>
+        </div>
+      </div>
+      <div class="field-group">
+        <label for="password" class="field-label">Contraseña</label>
+        <div class="input-wrap">
+          <i class="fa-solid fa-key input-icon"></i>
+          <input type="password" id="password" name="password"
+                 class="field-input" placeholder="••••••••"
+                 autocomplete="current-password" required>
+          <button type="button" class="toggle-pass" onclick="togglePass()" aria-label="Ver contraseña">
+            <i class="fa-regular fa-eye" id="eyeIcon"></i>
+          </button>
+        </div>
+      </div>
+      <button type="submit" class="btn-submit">
+        <i class="fa-solid fa-right-to-bracket"></i> Entrar
+      </button>
+    </form>
+
+    <a href="{{ url_for('index') }}" class="back-link">
+      <i class="fa-solid fa-arrow-left"></i> Volver al portal
+    </a>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function togglePass() {
+  const inp = document.getElementById('password');
+  const ico = document.getElementById('eyeIcon');
+  if (inp.type === 'password') {
+    inp.type = 'text';
+    ico.className = 'fa-regular fa-eye-slash';
+  } else {
+    inp.type = 'password';
+    ico.className = 'fa-regular fa-eye';
+  }
+}
+</script>
+{% endblock %}

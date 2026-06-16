@@ -1,0 +1,184 @@
+{% extends "base.html" %}
+{% block title %}Contar mi secreto — Portal Secreto{% endblock %}
+
+{% block content %}
+<div class="submit-page">
+  <div class="submit-card">
+    <div class="submit-header">
+      <div class="submit-icon" id="submitAvatarPreview">🐱</div>
+      <h1>Cuéntalo aquí</h1>
+      <p>Nadie sabrá quién eres. Tu secreto es tuyo.</p>
+    </div>
+
+    <form class="submit-form" method="POST" action="{{ url_for('submit') }}" enctype="multipart/form-data" novalidate>
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <input type="hidden" name="avatar" id="avatarInput" value="🐱">
+
+      <!-- Selector de avatar -->
+      <div class="field-group">
+        <label class="field-label">
+          <i class="fa-solid fa-masks-theater"></i> Elige tu personaje
+        </label>
+        <div class="avatar-picker">
+          {% for av in AVATARS %}
+          <button type="button" class="avatar-option {% if loop.first %}selected{% endif %}"
+                  data-avatar="{{ av }}" aria-label="Avatar {{ av }}">{{ av }}</button>
+          {% endfor %}
+        </div>
+      </div>
+
+      <!-- Selector de edad -->
+      <div class="field-group">
+        <label class="field-label">
+          <i class="fa-solid fa-cake-candles"></i> Tu edad <span class="optional-tag">opcional</span>
+        </label>
+        <div class="age-picker">
+          {% for age in AGE_RANGES %}
+          <button type="button" class="age-option" data-age="{{ age }}">{{ age }}</button>
+          {% endfor %}
+        </div>
+        <input type="hidden" name="age_range" id="ageInput" value="">
+      </div>
+
+      <!-- Textarea -->
+      <div class="field-group">
+        <label for="content" class="field-label">
+          <i class="fa-solid fa-feather-pointed"></i> Tu secreto
+        </label>
+        <div class="textarea-wrap">
+          <textarea
+            id="content"
+            name="content"
+            class="field-textarea"
+            placeholder="Escribe aquí lo que nunca has podido decir..."
+            maxlength="2000"
+            rows="6"
+            required
+          ></textarea>
+          <div class="char-counter">
+            <span id="charCount">0</span>/2000
+          </div>
+        </div>
+      </div>
+
+      <!-- Upload de imagen -->
+      <div class="field-group">
+        <label class="field-label">
+          <i class="fa-regular fa-image"></i> Foto <span class="optional-tag">opcional</span>
+        </label>
+        <div class="upload-zone" id="uploadZone">
+          <input type="file" id="imageInput" name="image"
+                 accept=".jpg,.jpeg,.png,.gif,.webp"
+                 class="upload-input">
+          <div class="upload-placeholder" id="uploadPlaceholder">
+            <i class="fa-solid fa-cloud-arrow-up"></i>
+            <span>Arrastra una foto o <strong>haz clic aquí</strong></span>
+            <small>JPG, PNG, GIF, WEBP · máx 5 MB</small>
+          </div>
+          <div class="upload-preview" id="uploadPreview" style="display:none">
+            <img id="previewImg" src="" alt="Vista previa">
+            <button type="button" class="remove-img" id="removeImg" aria-label="Quitar imagen">
+              <i class="fa-solid fa-xmark"></i>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Aviso de anonimato -->
+      <div class="anon-notice">
+        <i class="fa-solid fa-shield-halved"></i>
+        <span>No guardamos tu nombre, email ni ningún dato personal. Solo detectamos tu país para mostrar la banderita.</span>
+      </div>
+
+      <button type="submit" class="btn-submit" id="submitBtn">
+        <i class="fa-solid fa-paper-plane"></i>
+        <span>Publicar en secreto</span>
+      </button>
+    </form>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+  // ── Contador de caracteres ──
+  const textarea = document.getElementById('content');
+  const counter  = document.getElementById('charCount');
+  textarea.addEventListener('input', () => {
+    const len = textarea.value.length;
+    counter.textContent = len;
+    counter.parentElement.classList.toggle('near-limit', len > 1800);
+    counter.parentElement.classList.toggle('at-limit', len >= 2000);
+  });
+
+  // ── Avatar picker ──
+  const avatarInput   = document.getElementById('avatarInput');
+  const avatarPreview = document.getElementById('submitAvatarPreview');
+  document.querySelectorAll('.avatar-option').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('.avatar-option').forEach(b => b.classList.remove('selected'));
+      btn.classList.add('selected');
+      avatarInput.value   = btn.dataset.avatar;
+      avatarPreview.textContent = btn.dataset.avatar;
+    });
+  });
+
+  // ── Age picker ──
+  const ageInput = document.getElementById('ageInput');
+  document.querySelectorAll('.age-option').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const already = btn.classList.contains('selected');
+      document.querySelectorAll('.age-option').forEach(b => b.classList.remove('selected'));
+      if (!already) {
+        btn.classList.add('selected');
+        ageInput.value = btn.dataset.age;
+      } else {
+        ageInput.value = '';
+      }
+    });
+  });
+
+  // ── Upload de imagen ──
+  const uploadZone  = document.getElementById('uploadZone');
+  const imageInput  = document.getElementById('imageInput');
+  const placeholder = document.getElementById('uploadPlaceholder');
+  const preview     = document.getElementById('uploadPreview');
+  const previewImg  = document.getElementById('previewImg');
+  const removeBtn   = document.getElementById('removeImg');
+
+  uploadZone.addEventListener('click', (e) => {
+    if (!e.target.closest('.remove-img')) imageInput.click();
+  });
+  uploadZone.addEventListener('dragover', (e) => { e.preventDefault(); uploadZone.classList.add('drag-over'); });
+  uploadZone.addEventListener('dragleave', () => uploadZone.classList.remove('drag-over'));
+  uploadZone.addEventListener('drop', (e) => {
+    e.preventDefault();
+    uploadZone.classList.remove('drag-over');
+    if (e.dataTransfer.files[0]) setPreview(e.dataTransfer.files[0]);
+  });
+  imageInput.addEventListener('change', () => { if (imageInput.files[0]) setPreview(imageInput.files[0]); });
+  removeBtn.addEventListener('click', (e) => {
+    e.stopPropagation();
+    imageInput.value = '';
+    placeholder.style.display = '';
+    preview.style.display = 'none';
+    previewImg.src = '';
+  });
+  function setPreview(file) {
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      previewImg.src = e.target.result;
+      placeholder.style.display = 'none';
+      preview.style.display = 'flex';
+    };
+    reader.readAsDataURL(file);
+  }
+
+  // ── Evitar doble submit ──
+  document.querySelector('.submit-form').addEventListener('submit', () => {
+    const btn = document.getElementById('submitBtn');
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Publicando...';
+  });
+</script>
+{% endblock %}

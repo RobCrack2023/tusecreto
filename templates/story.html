@@ -1,0 +1,247 @@
+{% extends "base.html" %}
+{% block title %}Historia #{{ story.id }} — Portal Secreto{% endblock %}
+
+{% block content %}
+<div class="story-detail-page">
+
+  <!-- Botón volver -->
+  <a href="{{ url_for('index') }}" class="back-link-top">
+    <i class="fa-solid fa-arrow-left"></i> Volver
+  </a>
+
+  <!-- Historia principal -->
+  <article class="story-detail-card">
+    <div class="card-header">
+      <div class="anon-avatar emoji-avatar" style="--hue: {{ (story.id * 47) % 360 }}">
+        {{ story.avatar or '🐱' }}
+      </div>
+      <div class="card-meta">
+        <div class="card-meta-top">
+          {% if story.age_range %}<span class="age-badge">{{ story.age_range }} años</span>{% endif %}
+          {% if story.country_code %}<span class="country-flag" title="{{ story.country_name or '' }}">{{ country_flag(story.country_code) }}</span>{% endif %}
+        </div>
+        <span class="card-time">{{ story.time_ago() }}</span>
+      </div>
+      {% if story.is_edited %}
+      <span class="badge badge-edited" title="{{ story.edit_note or 'Editado por moderación' }}">
+        <i class="fa-solid fa-pen-to-square"></i> editado
+      </span>
+      {% endif %}
+    </div>
+
+    {% if story.image_path %}
+    <div class="card-image" style="max-height:400px">
+      <img src="{{ url_for('uploaded_file', filename=story.image_path) }}"
+           alt="Imagen" loading="lazy" onclick="openLightbox(this.src)">
+    </div>
+    {% endif %}
+
+    <div class="card-body">
+      <p class="story-text story-text-full">{{ story.content }}</p>
+    </div>
+
+    <!-- Reacciones -->
+    <div class="card-footer">
+      <div class="reaction-bar" data-story-id="{{ story.id }}"
+           data-my-sticker="{{ my_reacts.get(story.id) or '' }}">
+        <div class="reaction-chips" id="chips-{{ story.id }}">
+          {% set story_reactions = reactions_map.get(story.id, {}) %}
+          {% for sticker in active_stickers %}
+            {% set cnt = story_reactions.get(sticker.id, 0) %}
+            {% if cnt > 0 %}
+            <span class="reaction-chip {% if my_reacts.get(story.id) == sticker.id %}mine{% endif %}"
+                  data-sticker-id="{{ sticker.id }}" data-story-id="{{ story.id }}">
+              {% if sticker.sticker_type == 'emoji' %}<span class="s-emoji">{{ sticker.value }}</span>
+              {% else %}<img src="{{ url_for('sticker_file', filename=sticker.value) }}" alt="{{ sticker.name }}" class="s-img">{% endif %}
+              <span class="r-count">{{ cnt }}</span>
+            </span>
+            {% endif %}
+          {% endfor %}
+        </div>
+        <button class="react-trigger" data-story-id="{{ story.id }}" title="Reaccionar">
+          <i class="fa-regular fa-face-smile-plus"></i>
+        </button>
+        <span class="reply-count-btn static">
+          <i class="fa-regular fa-comment"></i>
+          <span>{{ replies|length }}</span>
+        </span>
+      </div>
+    </div>
+  </article>
+
+  <!-- ── Sección de respuestas ── -->
+  <div class="replies-section" id="replies">
+    <h2 class="replies-title">
+      <i class="fa-regular fa-comments"></i>
+      {{ replies|length }} {% if replies|length == 1 %}respuesta{% else %}respuestas{% endif %}
+    </h2>
+
+    <!-- Lista de respuestas -->
+    {% if replies %}
+    <div class="replies-list">
+      {% for reply in replies %}
+      <div class="reply-card" id="reply-{{ reply.id }}">
+        <div class="reply-header">
+          <div class="anon-avatar emoji-avatar reply-avatar" style="--hue: {{ (reply.id * 83) % 360 }}">
+            {{ reply.avatar or '🐱' }}
+          </div>
+          <div class="card-meta">
+            <div class="card-meta-top">
+              {% if reply.age_range %}<span class="age-badge">{{ reply.age_range }} años</span>{% endif %}
+              {% if reply.country_code %}<span class="country-flag" title="{{ reply.country_name or '' }}">{{ country_flag(reply.country_code) }}</span>{% endif %}
+            </div>
+            <span class="card-time">{{ reply.time_ago() }}</span>
+          </div>
+          {% if is_admin %}
+          <div class="reply-admin-actions">
+            <form method="POST" action="{{ url_for('admin_reply_hide', reply_id=reply.id) }}" class="inline-form">
+              <button type="submit" class="action-btn btn-hide" title="Ocultar">
+                <i class="fa-solid fa-eye-slash"></i>
+              </button>
+            </form>
+            <form method="POST" action="{{ url_for('admin_reply_delete', reply_id=reply.id) }}"
+                  class="inline-form" onsubmit="return confirm('¿Eliminar respuesta?')">
+              <button type="submit" class="action-btn btn-delete" title="Eliminar">
+                <i class="fa-solid fa-trash"></i>
+              </button>
+            </form>
+          </div>
+          {% endif %}
+        </div>
+        <div class="reply-body">
+          <p class="story-text">{{ reply.content }}</p>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+    {% else %}
+    <div class="no-replies">
+      <i class="fa-regular fa-comment-dots"></i>
+      <p>Sé el primero en responder</p>
+    </div>
+    {% endif %}
+
+    <!-- Formulario de respuesta -->
+    <div class="reply-form-wrap">
+      <h3 class="reply-form-title">
+        <i class="fa-solid fa-reply"></i> Tu respuesta
+      </h3>
+      <form method="POST" action="{{ url_for('story_detail', story_id=story.id) }}"
+            class="reply-form" novalidate>
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <input type="hidden" name="avatar" id="replyAvatarInput" value="🐱">
+
+        <!-- Avatar -->
+        <div class="field-group">
+          <label class="field-label"><i class="fa-solid fa-masks-theater"></i> Tu personaje</label>
+          <div class="avatar-picker avatar-picker-sm">
+            {% for av in AVATARS %}
+            <button type="button" class="avatar-option {% if loop.first %}selected{% endif %}"
+                    data-avatar="{{ av }}">{{ av }}</button>
+            {% endfor %}
+          </div>
+        </div>
+
+        <!-- Edad -->
+        <div class="field-group">
+          <label class="field-label"><i class="fa-solid fa-cake-candles"></i> Edad <span class="optional-tag">opcional</span></label>
+          <div class="age-picker">
+            {% for age in AGE_RANGES %}
+            <button type="button" class="age-option" data-age="{{ age }}">{{ age }}</button>
+            {% endfor %}
+          </div>
+          <input type="hidden" name="age_range" id="replyAgeInput" value="">
+        </div>
+
+        <!-- Texto -->
+        <div class="field-group">
+          <label for="replyContent" class="field-label">
+            <i class="fa-solid fa-feather-pointed"></i> Escribe tu respuesta
+          </label>
+          <div class="textarea-wrap">
+            <textarea id="replyContent" name="content" class="field-textarea"
+                      placeholder="¿Qué piensas de este secreto?"
+                      maxlength="1000" rows="4" required></textarea>
+            <div class="char-counter"><span id="replyCharCount">0</span>/1000</div>
+          </div>
+        </div>
+
+        <div class="anon-notice">
+          <i class="fa-solid fa-shield-halved"></i>
+          <span>Tu respuesta también es anónima. Solo detectamos tu país para la banderita.</span>
+        </div>
+
+        <button type="submit" class="btn-submit" id="replySubmitBtn">
+          <i class="fa-solid fa-paper-plane"></i> Publicar respuesta
+        </button>
+      </form>
+    </div>
+  </div>
+
+</div>
+
+<!-- Sticker Picker -->
+<div id="stickerPicker" class="sticker-picker">
+  <div class="picker-inner">
+    {% for sticker in active_stickers %}
+    <button class="sp-btn" data-sticker-id="{{ sticker.id }}" title="{{ sticker.name }}">
+      {% if sticker.sticker_type == 'emoji' %}<span class="s-emoji">{{ sticker.value }}</span>
+      {% else %}<img src="{{ url_for('sticker_file', filename=sticker.value) }}" alt="{{ sticker.name }}" class="s-img">{% endif %}
+    </button>
+    {% endfor %}
+  </div>
+</div>
+
+<!-- Lightbox -->
+<div class="lightbox" id="lightbox" onclick="closeLightbox()">
+  <button class="lightbox-close" onclick="closeLightbox()"><i class="fa-solid fa-xmark"></i></button>
+  <img id="lightbox-img" src="" alt="Imagen ampliada">
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+  // Avatar picker
+  const replyAvatarInput = document.getElementById('replyAvatarInput');
+  document.querySelectorAll('.avatar-option').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('.avatar-option').forEach(b => b.classList.remove('selected'));
+      btn.classList.add('selected');
+      replyAvatarInput.value = btn.dataset.avatar;
+    });
+  });
+
+  // Age picker
+  const replyAgeInput = document.getElementById('replyAgeInput');
+  document.querySelectorAll('.age-option').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const already = btn.classList.contains('selected');
+      document.querySelectorAll('.age-option').forEach(b => b.classList.remove('selected'));
+      if (!already) { btn.classList.add('selected'); replyAgeInput.value = btn.dataset.age; }
+      else replyAgeInput.value = '';
+    });
+  });
+
+  // Char counter
+  const ta = document.getElementById('replyContent');
+  const ct = document.getElementById('replyCharCount');
+  if (ta) ta.addEventListener('input', () => {
+    const l = ta.value.length;
+    ct.textContent = l;
+    ct.parentElement.classList.toggle('near-limit', l > 850);
+    ct.parentElement.classList.toggle('at-limit',   l >= 1000);
+  });
+
+  // Anti double-submit
+  document.querySelector('.reply-form')?.addEventListener('submit', () => {
+    const b = document.getElementById('replySubmitBtn');
+    b.disabled = true;
+    b.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Publicando...';
+  });
+
+  // Scroll to replies if hash present
+  if (window.location.hash === '#replies') {
+    document.getElementById('replies')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+</script>
+{% endblock %}
