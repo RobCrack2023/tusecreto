@@ -79,13 +79,12 @@ def country_flag(code: str) -> str:
 
 
 def get_country(ip: str) -> tuple[str, str]:
-    if ip in ('127.0.0.1', '::1', 'localhost'):
-        return ('', '')
+    # En local usamos la IP pública de la máquina (sin pasar IP al endpoint)
+    url = 'http://ip-api.com/json/?fields=countryCode,country' \
+          if ip in ('127.0.0.1', '::1', 'localhost') \
+          else f'http://ip-api.com/json/{ip}?fields=countryCode,country'
     try:
-        r = http_requests.get(
-            f'http://ip-api.com/json/{ip}?fields=countryCode,country',
-            timeout=2
-        )
+        r = http_requests.get(url, timeout=2)
         data = r.json()
         return (data.get('countryCode', ''), data.get('country', ''))
     except Exception:
